@@ -47,6 +47,8 @@
     key={graphKey}
 />
 
+<footer></footer>
+
 <style>
     .title {
         font-size: 35px;
@@ -102,5 +104,15 @@
         border: 1px solid #ccc;
         border-radius: 4px;
         cursor: pointer;
+    }
+
+    footer {
+        background-image: url('/olympic-games-svgrepo-com.svg'); 
+        position: relative;
+        background-repeat: repeat-x;
+        background-size:50px 30px;
+        height: 30px;
+        top: 10px;  
+        margin-top: 2%;
     }
 </style>
