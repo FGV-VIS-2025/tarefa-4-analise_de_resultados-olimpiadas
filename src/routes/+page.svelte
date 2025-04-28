@@ -7,7 +7,6 @@
     // Debug: monitorar mudanças no search
     $: console.log('Search changed:', search);
 </script>
-
   
 <svelte:head>
   <title>Tarefa 4 - Olimpíadas</title>
