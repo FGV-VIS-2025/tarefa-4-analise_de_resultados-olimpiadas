@@ -5,12 +5,14 @@
     export let csvUrl;
     export let measure;
     export let filter = '';
+    export let valueTypes = [];
 
     const m = { t: 60, r: 20, b: 60, l: 60 };
     const W = 900, H = 500;
 
     let svgEl;
-    let data = [];
+    let rawData = [];
+    let filteredData = [];
     let groups = [];
     let x, y, col;
     let ttVisible = false;
@@ -19,42 +21,39 @@
     let hoveredSport = null;
 
     onMount(async () => {
-        data = await d3.csv(csvUrl);
-        refresh();
+        rawData = await d3.csv(csvUrl);
+        valueTypes = [...new Set(rawData.map(d => d.value_type))].filter(Boolean);
+        if (valueTypes.length && !measure) measure = valueTypes[0];
+        applyFilters();
     });
 
     $: {
-		if (data.length && filter !== undefined) {
-			refresh();
+		// sempre que rawData, measure ou filter mudar, refaz o filtro e redesenha
+		if (rawData.length || measure || filter) {
+			applyFilters();
 		}
 	}
 
-    function refresh() {
-		console.log('Filter:', filter);  // Log filter value
-		if (!data.length) return;
+    function applyFilters() {
+        // Apply measure filter
+        filteredData = rawData.filter(d => 
+            d.medal_type === 'GOLD' && 
+            !isNaN(+d.value_unit) &&
+            (measure ? d.value_type === measure : true)
+        );
 
-		const filteredData = data.filter(d => 
-			d.medal_type === 'GOLD' && 
-			!isNaN(+d.value_unit)
-		);
+        // Apply event title filter
+        if (filter.trim()) {
+            const searchTerm = filter.trim().toLowerCase();
+            filteredData = filteredData.filter(d => 
+                d.event_title.toLowerCase().includes(searchTerm)
+            );
+        }
 
-		const allSports = d3.group(filteredData, d => d.discipline_title);
-		
-		const searchTerm = filter.trim().toLowerCase();
-		console.log('Search Term:', searchTerm);
-		
-		groups = searchTerm
-			? Array.from(allSports).filter(([sport, rows]) => {
-				console.log('Sport Name:', sport);  // Log sport name for filtering
-				return sport.toLowerCase().includes(searchTerm)
-			})
-			: Array.from(allSports);
-
-		console.log('Filtered Groups:', groups);  // Log the groups after filtering
-
-		draw();
-	}
-
+        // Group the filtered data
+        groups = Array.from(d3.group(filteredData, d => d.event_title));
+        draw();
+    }
 
     function draw() {
         if (!svgEl) return;
@@ -62,20 +61,16 @@
         const svg = d3.select(svgEl);
         svg.selectAll('*').remove();
 
-        if (groups.length === 0) {
+        if (!groups.length) {
             svg.append('text')
                 .attr('x', W / 2)
                 .attr('y', H / 2)
                 .attr('text-anchor', 'middle')
-                .text(filter ? 'No sports match your search' : 'No data available');
+                .text(getNoDataMessage());
             return;
         }
 
-        const years = groups.flatMap(([, v]) => v.map(d => {
-            const yearMatch = d.slug_game.match(/\d{4}/);
-            return yearMatch ? +yearMatch[0] : 0;
-        }));
-        
+        const years = groups.flatMap(([, v]) => v.map(d => +d.ano));
         const vals = groups.flatMap(([, v]) => v.map(d => +d.value_unit));
 
         x = d3.scaleLinear()
@@ -101,14 +96,14 @@
             .attr('text-anchor', 'middle')
             .attr('font-size', '20px')
             .attr('fill', '#333')
-            .text('Olympic Results Over Time');
+            .text(`Olympic Results Over Time (${measure})`);
 
-        groups.forEach(([sport, rows]) => {
+        groups.forEach(([event, rows]) => {
             const serie = rows.map(r => ({
-                year: +r.slug_game.match(/\d{4}/)[0],
+                year: +r.ano,
                 val: +r.value_unit,
                 raw: r,
-                sport
+                event
             })).sort((a, b) => a.year - b.year);
 
             const maxValue = Math.max(...serie.map(d => d.val));
@@ -118,13 +113,13 @@
             svg.append('path')
                 .datum(serie)
                 .attr('fill', 'none')
-                .attr('stroke', col(sport))
+                .attr('stroke', col(event))
                 .attr('stroke-width', 2)
-                .attr('opacity', activeSport ? (sport === activeSport ? 1 : 0.2) : 0.8)
+                .attr('opacity', activeSport ? (event === activeSport ? 1 : 0.2) : 0.8)
                 .attr('d', line)
                 .style('cursor', 'pointer')
                 .on('mouseenter', () => {
-                    hoveredSport = sport;
+                    hoveredSport = event;
                     draw();
                 })
                 .on('mouseleave', () => {
@@ -133,14 +128,13 @@
                 })
                 .on('click', (event) => {
                     event.stopPropagation();
-                    activeSport = sport === activeSport ? null : sport;
+                    activeSport = event === activeSport ? null : event;
                     ttVisible = false;
                     draw();
                 });
 
-            // Only show points if hovered or active
-            if (sport === hoveredSport || sport === activeSport) {
-                // Regular points (excluding max point)
+            if (event === hoveredSport || event === activeSport) {
+                // Regular points
                 svg.selectAll(null)
                     .data(serie.filter(d => d !== maxPoint))
                     .enter()
@@ -148,7 +142,7 @@
                     .attr('cx', d => x(d.year))
                     .attr('cy', d => y(d.val))
                     .attr('r', 3)
-                    .attr('fill', col(sport))
+                    .attr('fill', col(event))
                     .style('cursor', 'pointer')
                     .on('mouseenter', function() {
                         d3.select(this).attr('r', 5);
@@ -158,17 +152,17 @@
                     })
                     .on('click', (event, d) => {
                         event.stopPropagation();
-                        showTooltip(event, d, sport);
+                        showTooltip(event, d);
                     });
 
-                // Record mark (only when hovered/active)
+                // Record mark
                 if (maxPoint) {
                     svg.append('circle')
                         .attr('cx', x(maxPoint.year))
                         .attr('cy', y(maxPoint.val))
                         .attr('r', 6)
                         .attr('fill', 'white')
-                        .attr('stroke', col(sport))
+                        .attr('stroke', col(event))
                         .attr('stroke-width', 2)
                         .style('cursor', 'pointer')
                         .on('mouseenter', function() {
@@ -179,7 +173,7 @@
                         })
                         .on('click', (event) => {
                             event.stopPropagation();
-                            showTooltip(event, maxPoint, sport);
+                            showTooltip(event, maxPoint);
                         })
                         .append('title')
                         .text(`Record: ${maxPoint.val} (${maxPoint.year})`);
@@ -201,14 +195,24 @@
 
         svg.append('g')
             .attr('transform', `translate(${m.l},0)`)
-            .call(d3.axisLeft(y));
+            .call(d3.axisLeft(y))
+            .call(g => g.append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('y', -40)
+                .attr('x', -H / 2)
+                .attr('fill', '#333')
+                .attr('text-anchor', 'middle')
+                .attr('font-weight', 'bold')
+                .text(measure === 'TIME' ? 'Time (seconds)' : 
+                     measure === 'DISTANCE' ? 'Distance (meters)' : 
+                     measure === 'WEIGHT' ? 'Weight (kg)' : 'Value'));
     }
 
-    function showTooltip(event, d, sport) {
+    function showTooltip(event, d) {
         tt = { 
             x: event.clientX,
             y: event.clientY,
-            sport, 
+            sport: d.raw.event_title, 
             athlete: d.raw.athlete_full_name, 
             value: d.val, 
             year: d.year 
@@ -221,6 +225,12 @@
         ttVisible = false;
         draw();
     }
+
+    function getNoDataMessage() {
+        if (!measure) return 'Please select a measurement type';
+        if (filter && !filteredData.length) return 'No events match your search';
+        return 'No data available for current filters';
+    }
 </script>
 
 <div class="graph-container" on:click={handleClickOutside}>
@@ -231,7 +241,7 @@
             <b>{tt.sport}</b><br>
             Year: {tt.year}<br>
             Athlete: {tt.athlete}<br>
-            Result: {tt.value} {measure === 'time' ? 's' : measure === 'distance' ? 'm' : 'kg'}
+            Result: {tt.value} {measure === 'TIME' ? 's' : measure === 'DISTANCE' ? 'm' : measure === 'WEIGHT' ? 'kg' : ''}
         </aside>
     {/if}
 </div>
