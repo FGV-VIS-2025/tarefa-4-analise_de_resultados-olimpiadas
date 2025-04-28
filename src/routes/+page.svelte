@@ -4,6 +4,7 @@
 	let measure    = '';
 	let search     = '';
 	let valueTypes = [];
+    let selectedEvent = '';  
 
 	$: graphKey = measure + search;	/* força remount */
 </script>
@@ -76,6 +77,19 @@
 				{measure}
 				filter={search}/>
 	{/key}
+
+    {#if selectedEvent}
+    <h2 style="text-align:center;margin:2rem 0">
+        🔍 {selectedEvent}
+        <button style="margin-left:10px"
+                on:click={() => selectedEvent = ''}>voltar</button>
+    </h2>
+
+    <Graph  csvUrl="/df_processed.csv"
+            bind:valueTypes
+            {measure}
+            filter={selectedEvent}     />
+    {/if}
 </div>
 
 <style>
