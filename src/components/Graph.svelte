@@ -19,6 +19,7 @@
     let tt = { x: 0, y: 0, sport: '', athlete: '', value: 0, year: 0 };
     let activeSport = null;
     let hoveredSport = null;
+	let legendGroups = [];
 
     onMount(async () => {
         rawData = await d3.csv(csvUrl);
@@ -52,6 +53,7 @@
 
         // Group the filtered data
         groups = Array.from(d3.group(filteredData, d => d.event_title));
+		legendGroups = groups.map(([ev]) => ev);
         draw();
     }
 
@@ -233,30 +235,67 @@
     }
 </script>
 
-<div class="graph-container" on:click={handleClickOutside}>
-    <svg bind:this={svgEl} width={W} height={H}></svg>
+<div class="graph-wrapper" on:click={handleClickOutside}>
+	<svg bind:this={svgEl} width={W} height={H}></svg>
 
-    {#if ttVisible}
-        <aside class="tt" style:left={`${tt.x + 15}px`} style:top={`${tt.y + 15}px`}>
-            <b>{tt.sport}</b><br>
-            Year: {tt.year}<br>
-            Athlete: {tt.athlete}<br>
-            Result: {tt.value} {measure === 'TIME' ? 's' : measure === 'DISTANCE' ? 'm' : measure === 'WEIGHT' ? 'kg' : ''}
-        </aside>
-    {/if}
+	<!-- LEGENDA -->
+	{#if legendGroups.length}
+		<aside class="legend">
+			{#each legendGroups as ev}
+			<div class="legend-item" on:click|stopPropagation={() => activeSport = ev}>
+				<span class="swatch" style="background-color:{col(ev)}"></span>
+				{ev}
+			</div>
+			{/each}
+		</aside>
+	{/if}
+
+	{#if ttVisible}
+		<aside class="tt" style:left={`${tt.x + 15}px`} style:top={`${tt.y + 15}px`}>
+		<b>{tt.sport}</b><br>
+		Year: {tt.year}<br>
+		Athlete: {tt.athlete}<br>
+		Result: {tt.value}
+		{measure === 'TIME' ? ' s' :
+			measure === 'DISTANCE' ? ' m' :
+			measure === 'WEIGHT' ? ' kg' : ''}
+		</aside>
+	{/if}
 </div>
+  
 
 <style>
-    .graph-container {
-        display: flex;
-        justify-content: center;
-        width: 100%;
-        margin: 0 auto;
-        background-color: white;
-        padding: 1rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
+    .graph-wrapper{
+		display:flex;
+		gap:1rem;
+		width:100%;
+		justify-content:center;
+		background:#fff;
+		padding:1rem;
+		border-radius:8px;
+		box-shadow:0 2px 10px rgba(0,0,0,.1);
+		}
+
+		.legend{
+		max-height:500px;   /* igual à altura do SVG */
+		overflow-y:auto;
+		padding-right:4px;  /* espaço p/ scrollbar */
+		font-size:.8rem;
+		}
+
+		.legend-item{
+		display:flex;
+		align-items:center;
+		margin-bottom:4px;
+		}
+
+		.swatch{
+		width:14px;
+		height:14px;
+		border-radius:3px;
+		margin-right:6px;
+		}
+
     .tt {
         position: fixed;
         background: white;
