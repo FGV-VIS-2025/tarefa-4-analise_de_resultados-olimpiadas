@@ -6,7 +6,7 @@
 	let valueTypes = [];
     let selectedEvent = '';  
 
-	$: graphKey = measure + search;	/* força remount */
+	$: graphKey = measure + search;	/* force remount */
 </script>
 
 <svelte:head>
@@ -85,16 +85,17 @@
                 on:click={() => selectedEvent = ''}>voltar</button>
     </h2>
 
-    <Graph  csvUrl="/df_processed.csv"
-            bind:valueTypes
-            {measure}
-            filter={selectedEvent}     />
+    <Graph
+		csvUrl="/df_processed.csv"
+		bind:valueTypes
+		{measure}
+		searchQuery={search}/> 
     {/if}
 </div>
 
 <style>
 .page {
-	max-width: 1080px;
+	max-width: 1380px;
 	margin: auto;
 	padding: 3rem 1rem;
 }
