@@ -7,6 +7,9 @@
     let selectedEvent = '';  
 
 	$: graphKey = measure + search;	/* force remount */
+
+	import { base } from '$app/paths';
+  	let csvUrl = `${base}/df_processed.csv`;
 </script>
 
 <svelte:head>
@@ -43,7 +46,7 @@
 		<h1>🏆 Olympic Results Analysis 🏅</h1>
 		<h3>Guilherme Buss & Guilherme Carvalho</h3>
 		<p>
-			Visualização da evolução do desempenho olímpico.<br>
+			Visualização da evolução do olímpico.<br>
 			Dataset:
 			<a href="https://www.kaggle.com/datasets/piterfm/olympic-games-medals-19862018?select=olympic_results.csv"
 			   target="_blank"
@@ -69,7 +72,7 @@
 	</div>
 
 	{#key graphKey}
-		<Graph csvUrl="/df_processed.csv" bind:valueTypes {measure} searchQuery={search}/>
+		<Graph {csvUrl} bind:valueTypes {measure} searchQuery={search}/>
 	{/key}
 
     {#if selectedEvent}
@@ -80,7 +83,7 @@
     </h2>
 
     <Graph
-		csvUrl="/df_processed.csv"
+		{csvUrl}
 		bind:valueTypes
 		{measure}
 		searchQuery={search}/> 
