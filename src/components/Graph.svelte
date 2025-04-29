@@ -1,34 +1,29 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
-
-	/* props ---------------------------------------------------------- */
 	export let csvUrl;
 	export let measure     = '';
-	export let searchQuery = '';      /* usado pela página */
+	export let searchQuery = '';     
 	export let valueTypes  = [];
 
-	/* layout --------------------------------------------------------- */
 	const margin = { top: 60, right: 20, bottom: 60, left: 60 };
 	const chartHeight = 500;      
 	let chartWidth = 600;
 
-	let svgRef, chartContainerRef, ro;   /* ResizeObserver */
+	let svgRef, chartContainerRef, ro;  
 
-	/* data & state --------------------------------------------------- */
 	let rawData=[], filtered=[], groups=[], legend=[];
 	let xScale,yScale,color;
 
 	let activeEvent=null;
 	let introYear, recordRow, recAth, recVal, recYear;
 	let recPhoto='', recFlag='';
-
-	/* hover ---------------------------------------------------------- */
+	
 	let hoverVisible=false;
 	let hover={sport:'',athlete:'',year:0,value:0,country:'',photo:'',flag:''};
 	const cache=new Map();
 
-	/* --------------------------- mount ------------------------------ */
+	/* mount */
 	onMount(async ()=>{
 		rawData = await d3.csv(csvUrl);
 		valueTypes=[...new Set(rawData.map(d=>d.value_type))].filter(Boolean);
@@ -43,10 +38,9 @@
 	});
 	onDestroy(()=>ro?.disconnect());
 
-	/* reactivos */
 	$: { rawData; measure; searchQuery; rawData.length && filterData(); }
 
-	/* ------------------------- helpers ----------------------------- */
+	/* auxiliares */
 	function updateWidth(){
 		if(!chartContainerRef) return;
 		const w=chartContainerRef.clientWidth;
@@ -61,13 +55,11 @@
       (!measure || r.value_type === measure)
     );
 
-    // Apply search filter
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       filtered = filtered.filter(r => r.event_title.toLowerCase().includes(q));
     }
 
-    // Group filtered data
     groups = Array.from(d3.group(filtered, r => r.event_title));
     legend = groups.map(([ev]) => ev);
     color = d3.scaleOrdinal().domain(legend).range(d3.schemeTableau10);
@@ -130,7 +122,7 @@
 	const hideHover=()=>hoverVisible=false;
 	const resetAll = ()=>{activeEvent=null; hoverVisible=false; draw();};
 
-	/* --------------------------- draw ------------------------------ */
+	/* draw */
 	function draw(){
 		if(!svgRef) return;
 		const svg=d3.select(svgRef)
@@ -262,55 +254,108 @@
 .info-card,
 .hover-card{
 	min-height:250px;
-	max-height:300px;   /* nunca somam mais que 480px */
+	max-height:300px;   
 	overflow-y:auto;
 	font-size:0.75rem;
 }
+
 .info-card,
 .hover-card{
-	flex: 1 1 48%;                  /* divide espaço quase pela metade    */
+	flex: 1 1 48%;                  
 	overflow-y: auto;
-	font-size: .75rem;
+	font-size: .70rem;
 	padding: 1rem;
 	border-radius: var(--radius);
 	background: var(--card);
 	box-shadow: 0 2px 10px rgba(0,0,0,.1);
 }
-.chart-container{grid-column:2;grid-row:1/span 3;min-width:0;}
+
+.chart-container{
+	grid-column:2;
+	grid-row:1/span 3;
+	min-width:0;
+}
 
 .info-card,.hover-card,.chart-container,.legend{
-	background:var(--card);padding:1rem;border-radius:var(--radius);
+	background:var(--card);
+	padding:1rem;
+	border-radius:var(--radius);
 	box-shadow:0 2px 10px rgba(0,0,0,.1);
 }
 
-/* svg */
-.chart-container svg{width:100%;height:500px;}
-.legend{max-height:500px;overflow-y:auto;}
+.chart-container svg{
+	width:100%;
+	height:500px;
+}
 
-.ath-img{width:60px;border-radius:6px;display:block;margin:.4rem 0;}
-.flag{width:14px;height:9px;margin-left:3px;vertical-align:middle;}
+.legend{
+	max-height:500px;
+	overflow-y:auto;
+}
+
+.ath-img{
+	width:60px;
+	border-radius:6px;
+	display:block;
+	margin:.4rem 0;
+}
+
+.flag{width:14px;
+	height:9px;
+	margin-left:3px;
+	vertical-align:middle;
+}
 
 .legend-item{
-	display:flex;align-items:center;margin-bottom:6px;
-	cursor:pointer;border-radius:4px;padding:2px 4px;
-	transition:background-color .2s,transform .2s;white-space:normal;
+	display:flex;
+	align-items:center;
+	margin-bottom:6px;
+	font-size: 0.75rem;
+	cursor:pointer;
+	border-radius:4px;
+	padding:2px 4px;
+	transition:background-color .2s,transform .2s;
+	white-space:normal;
 }
-.legend-item:hover{background:rgba(0,0,0,.05);}
-.legend-item.active{background:rgba(212,175,55,.25);transform:scale(1.03);}
-.legend-item .swatch{width:14px;height:14px;border-radius:3px;margin-right:6px;}
-.legend-item.active .swatch{transform:scale(1.3);}
 
-.chart-container svg text      {font-family:Poppins,sans-serif;}
-.chart-container svg .tick line,
-.chart-container svg .domain   {stroke:var(--grid);}
-.chart-container svg .tick text{font-size:.75rem;}
+.legend-item:hover{
+	background:rgba(0,0,0,.05);
+}
+
+.legend-item.active{
+	background:rgba(212,175,55,.25);
+	transform:scale(1.03);
+}
+
+.legend-item .swatch{
+	width:14px;
+	height:14px;
+	border-radius:3px;
+	margin-right:6px;
+}
+
+.legend-item.active .swatch{
+	transform:scale(1.3);
+}
+
+.chart-container svg text{
+	font-family:Poppins,sans-serif;
+}
+
+.chart-container svg .tick line, .chart-container svg .domain{
+	stroke:var(--grid);
+}
+
+.chart-container svg .tick text{
+	font-size:.75rem;
+}
 
 .cards-column{
-	grid-column: 1;                 /* primeira coluna da grade */
-	grid-row:    1 / span 3;        /* ocupa toda a altura da grade */
+	grid-column: 1;                
+	grid-row:    1 / span 3;      
 	display: flex;
 	flex-direction: column;
-	height: 500px;                  /* igual à altura do SVG              */
+	height: 500px;                 
 	max-height: 500px;
 	gap: .5rem;
 }

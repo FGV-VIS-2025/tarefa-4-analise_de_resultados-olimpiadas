@@ -62,20 +62,14 @@
 				{/each}
 			</select>
 
-			<input	type="text"
-					bind:value={search}
-					placeholder="Buscar evento…"
-					disabled={!measure}>
+			<input type="text" bind:value={search} placeholder="Buscar evento…" disabled={!measure}>
 
 			<button on:click={() => search = ''} disabled={!measure}>Limpar</button>
 		</div>
 	</div>
 
 	{#key graphKey}
-		<Graph	csvUrl="/df_processed.csv"
-				bind:valueTypes
-				{measure}
-				filter={search}/>
+		<Graph csvUrl="/df_processed.csv" bind:valueTypes {measure} searchQuery={search}/>
 	{/key}
 
     {#if selectedEvent}
