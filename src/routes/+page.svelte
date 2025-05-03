@@ -46,7 +46,7 @@
 		<h1>🏆 Olympic Results Analysis 🏅</h1>
 		<h3>Guilherme Buss & Guilherme Carvalho</h3>
 		<p>
-			Visualização da evolução do olímpico.<br>
+			Visualização da evolução do desempenho olímpico.<br>
 			Dataset:
 			<a href="https://www.kaggle.com/datasets/piterfm/olympic-games-medals-19862018?select=olympic_results.csv"
 			   target="_blank"

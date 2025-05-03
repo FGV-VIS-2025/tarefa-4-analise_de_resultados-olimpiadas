@@ -6,7 +6,7 @@
 	export let searchQuery = '';     
 	export let valueTypes  = [];
 
-	const margin = { top: 60, right: 20, bottom: 60, left: 60 };
+	const margin = { top: 60, right: 50, bottom: 60, left: 60 };
 	const chartHeight = 500;      
 	let chartWidth = 600;
 
@@ -61,7 +61,9 @@
     }
 
     groups = Array.from(d3.group(filtered, r => r.event_title));
-    legend = groups.map(([ev]) => ev);
+    legend = groups
+    .map(([ev]) => ev)
+    .sort((a, b) => a.localeCompare(b));
     color = d3.scaleOrdinal().domain(legend).range(d3.schemeTableau10);
 
     draw();
@@ -122,67 +124,133 @@
 	const hideHover=()=>hoverVisible=false;
 	const resetAll = ()=>{activeEvent=null; hoverVisible=false; draw();};
 
-	/* draw */
-	function draw(){
-		if(!svgRef) return;
-		const svg=d3.select(svgRef)
-			.attr('width',chartWidth+margin.left+margin.right)
-			.attr('height',chartHeight);
+	function draw() {
+		if (!svgRef) return;
+
+		const svg = d3.select(svgRef)
+			.attr('width', chartWidth + margin.left + margin.right)
+			.attr('height', chartHeight);
 		svg.selectAll('*').remove();
 
 		const useGroups = activeEvent
-			? groups.filter(([ev])=>ev===activeEvent)
+			? groups.filter(([ev]) => ev === activeEvent)
 			: groups;
 
-		const years = useGroups.flatMap(([,v])=>v.map(r=>+r.ano));
-		const vals  = useGroups.flatMap(([,v])=>v.map(r=>+r.value_unit));
-		if(!years.length){
+		const years = useGroups.flatMap(([, v]) => v.map(r => +r.ano));
+		const vals = useGroups.flatMap(([, v]) => v.map(r => +r.value_unit));
+
+		if (!years.length) {
 			svg.append('text')
-				.attr('x',(chartWidth+margin.left+margin.right)/2)
-				.attr('y',chartHeight/2)
-				.attr('text-anchor','middle')
+				.attr('x', (chartWidth + margin.left + margin.right) / 2)
+				.attr('y', chartHeight / 2)
+				.attr('text-anchor', 'middle')
 				.text('Sem dados');
 			return;
 		}
 
-		xScale=d3.scaleLinear().domain(d3.extent(years))
-			.range([margin.left, margin.left+chartWidth]);
-		yScale=d3.scaleLinear().domain([0, d3.max(vals)]).nice()
-			.range([chartHeight-margin.bottom, margin.top]);
+		xScale = d3.scaleLinear()
+			.domain(d3.extent(years))
+			.range([margin.left, margin.left + chartWidth]);
 
-		const line=d3.line().x(d=>xScale(d.year)).y(d=>yScale(d.val));
+		yScale = d3.scaleLinear()
+			.domain([0, d3.max(vals)]).nice()
+			.range([chartHeight - margin.bottom, margin.top]);
+
+		const line = d3.line()
+			.x(d => xScale(d.year))
+			.y(d => yScale(d.val));
+
+		const measureLabels = {
+			'TIME': 'Tempo (segundos)',
+			'DISTANCE': 'Distância (metros)',
+			'WEIGHT': 'Peso (kg)'
+		};
+
+		const measureLabel = measureLabels[measure] || measure;
 
 		svg.append('text')
-			.attr('x',(chartWidth+margin.left+margin.right)/2)
-			.attr('y',30)
-			.attr('text-anchor','middle')
-			.attr('font-size','20px')
-			.text(`Olympic (${measure})`);
+			.attr('x', (chartWidth + margin.left + margin.right) / 2)
+			.attr('y', 30)
+			.attr('text-anchor', 'middle')
+			.attr('font-size', '20px')
+			.text(`Resultados Olímpicos - ${measureLabel}`);
 
-		useGroups.forEach(([ev,rows])=>{
-			const series=rows.map(r=>({year:+r.ano,val:+r.value_unit,raw:r,event:ev}))
-				.sort((a,b)=>a.year-b.year);
+		useGroups.forEach(([ev, rows]) => {
+			const series = rows.map(r => ({
+				year: +r.ano,
+				val: +r.value_unit,
+				raw: r,
+				event: ev
+			})).sort((a, b) => a.year - b.year);
 
-			svg.append('path').datum(series)
-				.attr('fill','none').attr('stroke',color(ev)).attr('stroke-width',2)
-				.attr('d',line)
-				.style('cursor','pointer')
-				.on('click',e=>{e.stopPropagation();selectEvent(ev);});
+		const path = svg.append('path').datum(series)
+			.attr('fill', 'none')
+			.attr('stroke', color(ev))
+			.attr('stroke-width', 2)
+			.attr('d', line)
+			.attr('stroke-dasharray', function() {
+				return this.getTotalLength();
+			})
+			.attr('stroke-dashoffset', function() {
+				return this.getTotalLength();
+			})
+			.style('cursor', 'pointer')
+			.on('click', e => { e.stopPropagation(); selectEvent(ev); });
 
-			svg.selectAll(null).data(series).enter().append('circle')
-				.attr('cx',d=>xScale(d.year)).attr('cy',d=>yScale(d.val))
-				.attr('r',8).attr('fill','transparent')
-				.on('mouseenter',(_,d)=>showHover(d))
-				.on('mouseleave',hideHover)
-				.on('click',e=>{e.stopPropagation();selectEvent(ev);});
+			path.transition()
+			.duration(1000)
+			.ease(d3.easeLinear)
+			.attr('stroke-dashoffset', 0);
+
+
+		svg.selectAll(null).data(series).enter().append('circle')
+			.attr('cx', d => xScale(d.year))
+			.attr('cy', d => yScale(d.val))
+			.attr('r', 0) 
+			.attr('fill', color(ev))
+			.attr('stroke', color(ev))
+			.attr('stroke-width', 2)
+			.style('cursor', 'pointer')
+			.on('mouseenter', function(_, d) {
+				d3.select(this)
+					.attr('r', 4);
+				showHover(d);
+			})
+			.on('mouseleave', function() {
+				d3.select(this)
+					.attr('r', 2);
+				hideHover();
+			})
+			.on('click', e => { e.stopPropagation(); selectEvent(ev); })
+			.transition()
+			.delay((_, i) => i*(1000/series.length)) 
+			.duration(500)
+			.attr('r', 2);
+
+
 		});
+		svg.append('g')
+			.attr('transform', `translate(0,${chartHeight - margin.bottom})`)
+			.call(d3.axisBottom(xScale).ticks(10).tickFormat(d3.format('d')));
+
+		svg.append('text')
+			.attr('x', margin.left + (chartWidth / 2))
+			.attr('y', chartHeight - (margin.bottom / 3))
+			.attr('text-anchor', 'middle')
+			.attr('font-size', '14px')
+			.text('Ano');
 
 		svg.append('g')
-			.attr('transform',`translate(0,${chartHeight-margin.bottom})`)
-			.call(d3.axisBottom(xScale).ticks(10).tickFormat(d3.format('d')));
-		svg.append('g')
-			.attr('transform',`translate(${margin.left},0)`)
+			.attr('transform', `translate(${margin.left},0)`)
 			.call(d3.axisLeft(yScale));
+
+		svg.append('text')
+			.attr('transform', 'rotate(-90)')
+			.attr('y', margin.left / 3 - 10)
+			.attr('x', -(chartHeight / 2))
+			.attr('text-anchor', 'middle')
+			.attr('font-size', '12px')
+			.text(measureLabel);
 	}
 </script>
 
@@ -332,6 +400,8 @@
 	height:14px;
 	border-radius:3px;
 	margin-right:6px;
+	flex-shrink: 0;        
+	display: inline-block;
 }
 
 .legend-item.active .swatch{
@@ -352,7 +422,7 @@
 
 .cards-column{
 	grid-column: 1;                
-	grid-row:    1 / span 3;      
+	grid-row: 1/span 3;      
 	display: flex;
 	flex-direction: column;
 	height: 500px;                 
