@@ -90,7 +90,7 @@
 		}
 
 		legend = groups.map(([ev]) => ev).sort((a, b) => a.localeCompare(b));
-		color = d3.scaleOrdinal().domain(legend).range(d3.schemeTableau10);
+		color = d3.scaleOrdinal().domain(legend).range(d3.quantize(t => d3.interpolateRainbow(t * 0.8 + 0.1), Math.max(10, legend.length)));
 
 		draw();
 	}
@@ -441,6 +441,7 @@
 	margin-right:6px;
 	flex-shrink: 0;        
 	display: inline-block;
+	border: 1px solid rgba(0,0,0,0.1); 
 }
 
 .legend-item.active .swatch{
