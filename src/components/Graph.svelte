@@ -5,6 +5,8 @@
 	export let measure     = '';
 	export let searchQuery = '';     
 	export let valueTypes  = [];
+	export let yMin = '';
+	export let yMax = '';
 
 	const margin = { top: 60, right: 50, bottom: 60, left: 60 };
 	const chartHeight = 500;      
@@ -38,7 +40,7 @@
 	});
 	onDestroy(()=>ro?.disconnect());
 
-	$: { rawData; measure; searchQuery; rawData.length && filterData(); }
+	$: { rawData; measure; searchQuery; yMin; yMax; rawData.length && filterData(); }
 
 	/* auxiliares */
 	function updateWidth(){
@@ -48,28 +50,50 @@
 		draw();
 	}
 
+	function calculateInitialYRange() {
+		const allValues = filtered.map(d => +d.value_unit);
+		return {
+			min: d3.min(allValues),
+			max: d3.max(allValues)
+		};
+	}
+
 	function filterData() {
-    filtered = rawData.filter(r =>
-      r.medal_type === 'GOLD' &&
-      !isNaN(+r.value_unit) &&
-      (!measure || r.value_type === measure)
-    );
+		filtered = rawData.filter(r =>
+			r.medal_type === 'GOLD' &&
+			!isNaN(+r.value_unit) &&
+			(!measure || r.value_type === measure)
+		);
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      filtered = filtered.filter(r => r.event_title.toLowerCase().includes(q));
-    }
+		if (searchQuery.trim()) {
+			const q = searchQuery.trim().toLowerCase();
+			filtered = filtered.filter(r => r.event_title.toLowerCase().includes(q));
+		}
 
-    groups = Array.from(d3.group(filtered, r => r.event_title));
-    legend = groups
-    .map(([ev]) => ev)
-    .sort((a, b) => a.localeCompare(b));
-    color = d3.scaleOrdinal().domain(legend).range(d3.schemeTableau10);
+		// Calculate initial Y-range
+		const initialRange = calculateInitialYRange();
+		if (!yMin && !yMax) {
+			yMin = initialRange.min;
+			yMax = initialRange.max;
+		}
 
-    draw();
-  }
+		groups = Array.from(d3.group(filtered, r => r.event_title));
 
-  $: { rawData, measure, searchQuery, rawData.length && filterData(); }
+		// Filter by Y-range if specified
+		const yMinNum = Number(yMin);
+		const yMaxNum = Number(yMax);
+		if (!isNaN(yMinNum) && !isNaN(yMaxNum) && yMinNum <= yMaxNum) {
+			groups = groups.filter(([ev, rows]) => {
+				const values = rows.map(r => +r.value_unit);
+				return d3.min(values) <= yMaxNum && d3.max(values) >= yMinNum;
+			});
+		}
+
+		legend = groups.map(([ev]) => ev).sort((a, b) => a.localeCompare(b));
+		color = d3.scaleOrdinal().domain(legend).range(d3.schemeTableau10);
+
+		draw();
+	}
 
 	function selectEvent(ev){
 		activeEvent = activeEvent===ev ? null : ev;
@@ -132,12 +156,11 @@
 			.attr('height', chartHeight);
 		svg.selectAll('*').remove();
 
-		const useGroups = activeEvent
-			? groups.filter(([ev]) => ev === activeEvent)
-			: groups;
+		const useGroups = groups;
 
-		const years = useGroups.flatMap(([, v]) => v.map(r => +r.ano));
-		const vals = useGroups.flatMap(([, v]) => v.map(r => +r.value_unit));
+		const allData = groups.flatMap(([, v]) => v);
+		const vals = allData.map(d => +d.value_unit);
+		const years = allData.map(d => +d.ano);
 
 		if (!years.length) {
 			svg.append('text')
@@ -152,9 +175,18 @@
 			.domain(d3.extent(years))
 			.range([margin.left, margin.left + chartWidth]);
 
-		yScale = d3.scaleLinear()
-			.domain([0, d3.max(vals)]).nice()
-			.range([chartHeight - margin.bottom, margin.top]);
+		// Set Y-scale based on user input or data
+		const yMinNum = Number(yMin);
+		const yMaxNum = Number(yMax);
+		if (!isNaN(yMinNum) && !isNaN(yMaxNum) && yMinNum <= yMaxNum) {
+			yScale = d3.scaleLinear()
+				.domain([yMinNum, yMaxNum])
+				.range([chartHeight - margin.bottom, margin.top]);
+		} else {
+			yScale = d3.scaleLinear()
+				.domain([0, d3.max(vals)]).nice()
+				.range([chartHeight - margin.bottom, margin.top]);
+		}
 
 		const line = d3.line()
 			.x(d => xScale(d.year))
@@ -176,59 +208,66 @@
 			.text(`Resultados Olímpicos - ${measureLabel}`);
 
 		useGroups.forEach(([ev, rows]) => {
-			const series = rows.map(r => ({
+			// Filter points outside the range
+			const filteredRows = rows.filter(r => {
+				const val = +r.value_unit;
+				if (isNaN(yMinNum)) return true;
+				return val >= yMinNum && val <= yMaxNum;
+			});
+
+			const series = filteredRows.map(r => ({
 				year: +r.ano,
 				val: +r.value_unit,
 				raw: r,
 				event: ev
 			})).sort((a, b) => a.year - b.year);
 
-		const path = svg.append('path').datum(series)
-			.attr('fill', 'none')
-			.attr('stroke', color(ev))
-			.attr('stroke-width', 2)
-			.attr('d', line)
-			.attr('stroke-dasharray', function() {
-				return this.getTotalLength();
-			})
-			.attr('stroke-dashoffset', function() {
-				return this.getTotalLength();
-			})
-			.style('cursor', 'pointer')
-			.on('click', e => { e.stopPropagation(); selectEvent(ev); });
+			const path = svg.append('path').datum(series)
+				.attr('fill', 'none')
+				.attr('stroke', color(ev))
+				.attr('stroke-width', 2)
+				.style('opacity', activeEvent ? (ev === activeEvent ? 1 : 0.2) : 1)
+				.attr('d', line)
+				.attr('stroke-dasharray', function() {
+					return this.getTotalLength();
+				})
+				.attr('stroke-dashoffset', function() {
+					return this.getTotalLength();
+				})
+				.style('cursor', 'pointer')
+				.on('click', e => { e.stopPropagation(); selectEvent(ev); });
 
 			path.transition()
-			.duration(1000)
-			.ease(d3.easeLinear)
-			.attr('stroke-dashoffset', 0);
+				.duration(1000)
+				.ease(d3.easeLinear)
+				.attr('stroke-dashoffset', 0);
 
-
-		svg.selectAll(null).data(series).enter().append('circle')
-			.attr('cx', d => xScale(d.year))
-			.attr('cy', d => yScale(d.val))
-			.attr('r', 0) 
-			.attr('fill', color(ev))
-			.attr('stroke', color(ev))
-			.attr('stroke-width', 2)
-			.style('cursor', 'pointer')
-			.on('mouseenter', function(_, d) {
-				d3.select(this)
-					.attr('r', 4);
-				showHover(d);
-			})
-			.on('mouseleave', function() {
-				d3.select(this)
-					.attr('r', 2);
-				hideHover();
-			})
-			.on('click', e => { e.stopPropagation(); selectEvent(ev); })
-			.transition()
-			.delay((_, i) => i*(1000/series.length)) 
-			.duration(500)
-			.attr('r', 2);
-
-
+			svg.selectAll(null).data(series).enter().append('circle')
+				.attr('cx', d => xScale(d.year))
+				.attr('cy', d => yScale(d.val))
+				.attr('r', 0) 
+				.attr('fill', color(ev))
+				.attr('stroke', color(ev))
+				.attr('stroke-width', 2)
+				.style('opacity', activeEvent ? (ev === activeEvent ? 1 : 0.2) : 1)
+				.style('cursor', 'pointer')
+				.on('mouseenter', function(_, d) {
+					d3.select(this)
+						.attr('r', 4);
+					showHover(d);
+				})
+				.on('mouseleave', function() {
+					d3.select(this)
+						.attr('r', 2);
+					hideHover();
+				})
+				.on('click', e => { e.stopPropagation(); selectEvent(ev); })
+				.transition()
+				.delay((_, i) => i*(1000/series.length)) 
+				.duration(500)
+				.attr('r', 2);
 		});
+
 		svg.append('g')
 			.attr('transform', `translate(0,${chartHeight - margin.bottom})`)
 			.call(d3.axisBottom(xScale).ticks(10).tickFormat(d3.format('d')));

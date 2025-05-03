@@ -4,12 +4,20 @@
 	let measure    = '';
 	let search     = '';
 	let valueTypes = [];
+	let yMin = '';
+	let yMax = '';
     let selectedEvent = '';  
 
-	$: graphKey = measure + search;	/* force remount */
+	$: graphKey = measure + search + yMin + yMax;	/* force remount */
 
 	import { base } from '$app/paths';
   	let csvUrl = `${base}/df_processed.csv`;
+
+	function resetFilters() {
+		search = '';
+		yMin = '';
+		yMax = '';
+	}
 </script>
 
 <svelte:head>
@@ -67,12 +75,25 @@
 
 			<input type="text" bind:value={search} placeholder="Buscar evento…" disabled={!measure}>
 
-			<button on:click={() => search = ''} disabled={!measure}>Limpar</button>
+			<div class="range-controls">
+				<span>Resultado:</span>
+				<input type="number" bind:value={yMin} placeholder="Min" disabled={!measure} class="range-input">
+				<span>a</span>
+				<input type="number" bind:value={yMax} placeholder="Max" disabled={!measure} class="range-input">
+				<button on:click={resetFilters} disabled={!measure} class="clear-btn">Limpar</button>
+			</div>
 		</div>
 	</div>
 
 	{#key graphKey}
-		<Graph {csvUrl} bind:valueTypes {measure} searchQuery={search}/>
+		<Graph 
+			{csvUrl} 
+			bind:valueTypes 
+			{measure} 
+			searchQuery={search}
+			yMin={yMin}
+			yMax={yMax}
+		/>
 	{/key}
 
     {#if selectedEvent}
@@ -86,7 +107,10 @@
 		{csvUrl}
 		bind:valueTypes
 		{measure}
-		searchQuery={search}/> 
+		searchQuery={search}
+		yMin={yMin}
+		yMax={yMax}
+	/> 
     {/if}
 </div>
 
@@ -124,9 +148,11 @@
 
 .controls {
 	display: flex;
-	gap: 10px;
+	gap: 40px;
 	max-width: 900px;
 	width: 100%;
+	flex-wrap: wrap;
+	align-items: center;
 }
 
 .controls select,
@@ -138,20 +164,42 @@
 	border-radius: var(--radius);
 }
 
-.controls select,
-.controls input {
+.controls select {
 	background: #fff;
-	flex: 1;
-	min-width: 200px;
+	min-width: 150px;
 }
 
-.controls button {
+.range-controls {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	flex: 1;
+}
+
+.range-controls span {
+	font-size: 0.9rem;
+	color: #555;
+}
+
+.range-input {
+	width: 80px !important;
+	flex: none;
+}
+
+.clear-btn {
 	background: var(--primary);
 	color: #fff;
 	cursor: pointer;
 	transition: background .2s;
+	margin-left: auto;
 }
 
-.controls button:disabled { background: #888; }
-.controls button:not(:disabled):hover { background: #00264d; }
+.controls button:disabled { 
+	background: #888; 
+	cursor: not-allowed;
+}
+
+.controls button:not(:disabled):hover { 
+	background: #00264d; 
+}
 </style>
