@@ -1,38 +1,9 @@
-# create-svelte
+### Análise de Resultados - Olimpíadas
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+A ideia geral da nossa visualização é de observar a evolução dos recordes olímpicos durante a história dos jogos, evidenciando, como consequência, a melhora do atleticismo/preparo físico humano para essas atividades. Para isso, escolhemos uma base que continha as informações necessárias e fizemos uma filtragem e limpeza nos dados, escolhendo as categorias que seriam analizadas e formatando os resultados de cada atleta.
 
-## Creating a project
+Para a visualização de fato, escolhemos representá-la com um gráfico de linha, já que ele apresenta com mais efetividade o aspecto temporal que gostaríamos de implementar. Além disso, fizemos uma separação entre esportes de tempo, distância e peso com um gráfico para cada, visto que esportes em uma mesma unidade de medida possuem linhas que tendem a seguir a mesma tendência (crescimento para distância e redução para tempo, por exemplo). O leitor, portanto, poderia escolher a medida que deseja analisar e todos os esportes que ela engloba apareceriam em um gráfico de linhas acumulado. A partir daqui, uma tendência geral já poderia ser observada.
 
-If you're seeing this, you've probably already done this step. Congrats!
+Ao clicar em uma linha, selecionar o esporte no card à direita ou pesquisar pelo esporte, o gráfico seria filtrado para apenas a categoria escolhida, onde o usuário seria apresentado à um diagnóstico mais específico. Aqui, além do hover que mostra as informações do ponto, incluímos também um card fixo com o recorde da categoria. Para auxiliar na visibilidade, adicionamos a possibilidade de alterar o range do eixo y (categorias de score baixo ficavam comprimidadas no fundo do gráfico).
 
-```bash
-# create a new project in the current directory
-npm create svelte@latest
-
-# create a new project in my-app
-npm create svelte@latest my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+Carvalho preparou os dados enquanto Buss fez o gráfico inicial. A partir daí, ambos trabalharam juntos na elaboração dos filtros, cards, legendas, aspectos visuais e redação final. Escolher os esportes que seríam utilizados foi uma tarefa bastante complicada, já que tínhamos uma gama muito grande de opções e muitos deles tinham resultados em formado de string que se diferenciavam e requiriam tratamento. Outro ponto desafiador foi escolher como seria a transição de gráfico agrupado -> gráfico de um esporte, mas após analisar as críticas enviadas, vimos a combinação da redução de opacidade com o filtro do eixo y como uma boa opção. Acreditamos ter gasto por volta de 15 horas/pessoa no desenvolvimento desse trabalho, que se dividiu quase que equivalentemente entre as preparações e componentes elaborados (tratamento de dados, criação de cards, hover e filtragem de esportes, etc).
