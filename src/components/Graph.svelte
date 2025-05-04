@@ -226,7 +226,7 @@
 				.attr('fill', 'none')
 				.attr('stroke', color(ev))
 				.attr('stroke-width', 2)
-				.style('opacity', activeEvent ? (ev === activeEvent ? 1 : 0.2) : 1)
+				.style('opacity', activeEvent ? (ev === activeEvent ? 1 : 0.05) : 1)
 				.attr('d', line)
 				.attr('stroke-dasharray', function() {
 					return this.getTotalLength();
@@ -249,7 +249,7 @@
 				.attr('fill', color(ev))
 				.attr('stroke', color(ev))
 				.attr('stroke-width', 2)
-				.style('opacity', activeEvent ? (ev === activeEvent ? 1 : 0.2) : 1)
+				.style('opacity', activeEvent ? (ev === activeEvent ? 1 : 0.05) : 1)
 				.style('cursor', 'pointer')
 				.on('mouseenter', function(_, d) {
 					d3.select(this)

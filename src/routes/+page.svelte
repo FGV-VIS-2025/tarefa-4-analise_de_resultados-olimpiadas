@@ -84,6 +84,9 @@
 			</div>
 		</div>
 	</div>
+	<span id="guide">
+		*recomendamos o uso para visualizar valores pequenos
+	</span>
 
 	{#key graphKey}
 		<Graph 
@@ -202,4 +205,16 @@
 .controls button:not(:disabled):hover { 
 	background: #00264d; 
 }
+
+
+#guide {
+	position: absolute;
+	left: 49%;
+	height: 10px;
+	top: 254px;
+	display: block;
+	font-size: 0.68rem;
+	color: #777;
+}
+
 </style>
